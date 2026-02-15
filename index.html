@@ -963,7 +963,7 @@
       <li><a href="#pricing">Pricing</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
-    <button class="nav-cta">Upload File</button>
+    <button class="nav-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Upload File</button>
   </nav>
 
   <!-- HERO -->
@@ -1235,19 +1235,23 @@
       <div class="spec-table reveal">
         <div class="spec-row">
           <span class="spec-key">Build Volume</span>
-          <span class="spec-val">400 × 400 × 500 mm</span>
+          <span class="spec-val">256 × 256 × 256 mm</span>
         </div>
         <div class="spec-row">
           <span class="spec-key">Layer Height</span>
-          <span class="spec-val highlight">100 – 300 μm</span>
+          <span class="spec-val highlight">50 – 350 μm</span>
         </div>
         <div class="spec-row">
           <span class="spec-key">Nozzle Diameter</span>
-          <span class="spec-val">0.4 – 1.0 mm</span>
+          <span class="spec-val">0.2 – 0.8 mm</span>
         </div>
         <div class="spec-row">
           <span class="spec-key">Dimensional Tolerance</span>
-          <span class="spec-val highlight">± 0.2 mm</span>
+          <span class="spec-val highlight">± 0.1 mm</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Max Print Speed</span>
+          <span class="spec-val highlight">500 mm/s</span>
         </div>
         <div class="spec-row">
           <span class="spec-key">Infill Density</span>
@@ -1263,7 +1267,7 @@
         </div>
         <div class="spec-row">
           <span class="spec-key">File Formats</span>
-          <span class="spec-val">STL / OBJ / STEP</span>
+          <span class="spec-val">STL / OBJ / STEP / 3MF / AMF</span>
         </div>
       </div>
       <div class="pricing-card reveal">
@@ -1371,7 +1375,7 @@
         <textarea class="form-input form-textarea" name="message" placeholder="Describe your part, dimensions, tolerances, finish requirements..." required></textarea>
       </div>
       <div class="form-group full">
-        <label class="form-label">Attach File (STL / OBJ / STEP)</label>
+        <label class="form-label">Attach File (STL / OBJ / STEP / 3MF / AMF / 3MF / AMF)</label>
         <label class="upload-zone" id="uploadLabel" style="cursor:pointer;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1379,7 +1383,7 @@
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
           <span id="uploadText">Drop file or click to browse</span>
-          <input type="file" name="file" accept=".stl,.obj,.step,.stp" style="display:none" id="fileInput" />
+          <input type="file" name="file" accept=".stl,.obj,.step,.stp,.3mf,.amf" style="display:none" id="fileInput" />
         </label>
       </div>
       <button type="submit" class="btn-primary" style="width:100%;text-align:center;padding:20px;font-size:13px;">Send Quote Request →</button>
