@@ -1459,14 +1459,7 @@
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
     reveals.forEach(el => observer.observe(el));
 
-    // File input label update
-    const fileInput = document.getElementById('fileInput');
-    const uploadText = document.getElementById('uploadText');
-    if (fileInput) {
-      fileInput.addEventListener('change', () => {
-        if (fileInput.files[0]) uploadText.textContent = fileInput.files[0].name;
-      });
-    }
+
 
     // Smooth active nav link highlighting
     const sections = document.querySelectorAll('section[id]');
