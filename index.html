@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STRATUM — 3D Print Services</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Barlow:wght@300;400;600;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --orange: #ff4d00;
+      --orange-glow: rgba(255, 77, 0, 0.15);
+      --orange-dim: #cc3d00;
+      --white: #f0ece4;
+      --muted: #666;
+      --border: #222;
+      --grid-line: rgba(255,255,255,0.03);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Custom cursor */
+    .cursor {
+      position: fixed;
+      width: 12px; height: 12px;
+      background: var(--orange);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s, width 0.2s, height 0.2s;
+      mix-blend-mode: difference;
+    }
+    .cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 1px solid var(--orange);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: transform 0.15s ease-out, width 0.3s, height 0.3s, opacity 0.3s;
+      opacity: 0.5;
+    }
+    body:hover .cursor { opacity: 1; }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* NAVBAR */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 48px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,10,10,0.85);
+      backdrop-filter: blur(12px);
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 4px;
+      color: var(--white);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--orange); }
+    .nav-links {
+      display: flex;
+      gap: 40px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--orange); }
+    .nav-cta {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: var(--orange);
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      cursor: none;
+      font-weight: 500;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .nav-cta:hover { background: var(--orange-dim); transform: scale(0.98); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      padding-top: 80px;
+    }
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 48px 80px 80px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--orange);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.2s forwards;
+    }
+    .hero-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(72px, 9vw, 130px);
+      line-height: 0.9;
+      letter-spacing: 2px;
+      color: var(--white);
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.4s forwards;
+    }
+    .hero-title .accent { color: var(--orange); }
+    .hero-title .stroke {
+      -webkit-text-stroke: 1px var(--white);
+      color: transparent;
+    }
+    .hero-desc {
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--muted);
+      max-width: 420px;
+      margin-bottom: 48px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.6s forwards;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.8s forwards;
+    }
+    .btn-primary {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: var(--orange);
+      color: #000;
+      border: none;
+      padding: 18px 36px;
+      cursor: none;
+      font-weight: 500;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary:hover { background: var(--orange-dim); transform: translateY(-2px); }
+    .btn-outline {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--white);
+      border: 1px solid var(--border);
+      padding: 18px 36px;
+      cursor: none;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-outline:hover { border-color: var(--orange); color: var(--orange); }
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin-top: 64px;
+      padding-top: 40px;
+      border-top: 1px solid var(--border);
+      opacity: 0;
+      animation: fadeUp 0.7s 1s forwards;
+    }
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      color: var(--white);
+      letter-spacing: 1px;
+    }
+    .stat-num span { color: var(--orange); }
+    .stat-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* 3D CANVAS AREA */
+    .hero-right {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .hero-right::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, var(--orange-glow) 0%, transparent 70%);
+    }
+    .print-visual {
+      position: relative;
+      width: 380px;
+      height: 380px;
+      opacity: 0;
+      animation: fadeIn 1.2s 0.5s forwards;
+    }
+    .print-visual svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 40px rgba(255,77,0,0.3));
+      animation: rotate3d 20s linear infinite;
+    }
+    @keyframes rotate3d {
+      0% { transform: rotateY(0deg) rotateX(5deg); }
+      100% { transform: rotateY(360deg) rotateX(5deg); }
+    }
+    .print-layer {
+      position: absolute;
+      left: 50%;
+      bottom: 40px;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .layer-bar {
+      height: 4px;
+      background: var(--orange);
+      border-radius: 2px;
+      animation: layerBuild 3s ease-in-out infinite;
+    }
+    @keyframes layerBuild {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    /* Scanning line */
+    .scan-line {
+      position: absolute;
+      left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--orange), transparent);
+      animation: scan 4s ease-in-out infinite;
+      opacity: 0.6;
+    }
+    @keyframes scan {
+      0% { top: 10%; }
+      100% { top: 90%; }
+    }
+
+    /* MARQUEE */
+    .marquee-wrap {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+      padding: 16px 0;
+      position: relative;
+      z-index: 1;
+    }
+    .marquee-track {
+      display: flex;
+      gap: 0;
+      white-space: nowrap;
+      animation: marquee 20s linear infinite;
+    }
+    .marquee-item {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 14px;
+      letter-spacing: 6px;
+      color: var(--muted);
+      padding: 0 40px;
+    }
+    .marquee-item span { color: var(--orange); }
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* SERVICES */
+    section { position: relative; z-index: 1; }
+    .services {
+      padding: 120px 80px;
+    }
+    .section-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 64px;
+    }
+    .section-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--orange);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 6vw, 80px);
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+    .section-desc {
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 320px;
+      line-height: 1.7;
+      padding-bottom: 8px;
+    }
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+    .service-card {
+      background: var(--surface);
+      padding: 48px 40px;
+      transition: background 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .service-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 2px; width: 0;
+      background: var(--orange);
+      transition: width 0.4s;
+    }
+    .service-card:hover { background: var(--surface2); }
+    .service-card:hover::after { width: 100%; }
+    .service-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--orange);
+      margin-bottom: 24px;
+    }
+    .service-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 24px;
+    }
+    .service-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+    .service-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+    .service-link {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--orange);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: gap 0.2s;
+    }
+    .service-link:hover { gap: 16px; }
+
+    /* PROCESS */
+    .process {
+      padding: 120px 80px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .process-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 64px;
+      position: relative;
+    }
+    .process-steps::before {
+      content: '';
+      position: absolute;
+      top: 32px;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), var(--orange), var(--border));
+    }
+    .step {
+      padding: 0 32px;
+      text-align: center;
+    }
+    .step-circle {
+      width: 64px;
+      height: 64px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 32px;
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      color: var(--orange);
+      background: var(--bg);
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+    .step:hover .step-circle {
+      border-color: var(--orange);
+      background: var(--orange-glow);
+      box-shadow: 0 0 24px var(--orange-glow);
+    }
+    .step-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* MATERIALS */
+    .materials {
+      padding: 120px 80px;
+    }
+    .materials-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+      margin-top: 64px;
+    }
+    .material-card {
+      border: 1px solid var(--border);
+      padding: 32px 24px;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: none;
+    }
+    .material-card:hover {
+      border-color: var(--orange);
+      background: var(--orange-glow);
+      transform: translateY(-4px);
+    }
+    .material-swatch {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+    }
+    .material-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+    .material-prop {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* SPECS TABLE */
+    .specs {
+      padding: 120px 80px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .specs-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      margin-top: 64px;
+    }
+    .spec-table {
+      border: 1px solid var(--border);
+    }
+    .spec-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 28px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+    .spec-row:last-child { border-bottom: none; }
+    .spec-row:hover { background: var(--surface2); }
+    .spec-key {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .spec-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 1px;
+      color: var(--white);
+    }
+    .spec-val.highlight { color: var(--orange); }
+    .pricing-card {
+      border: 1px solid var(--orange);
+      padding: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .pricing-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--orange);
+    }
+    .pricing-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      background: var(--orange);
+      color: #000;
+      padding: 6px 12px;
+      display: inline-block;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+    .pricing-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .pricing-price {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 72px;
+      letter-spacing: -2px;
+      color: var(--orange);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .pricing-unit {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+    .pricing-features {
+      list-style: none;
+      margin-bottom: 40px;
+    }
+    .pricing-features li {
+      font-size: 14px;
+      color: var(--muted);
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .pricing-features li::before {
+      content: '—';
+      color: var(--orange);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* TESTIMONIALS */
+    .testimonials {
+      padding: 120px 80px;
+      border-top: 1px solid var(--border);
+    }
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      margin-top: 64px;
+    }
+    .testimonial {
+      background: var(--surface);
+      padding: 48px 40px;
+      transition: background 0.3s;
+    }
+    .testimonial:hover { background: var(--surface2); }
+    .testimonial-quote {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 60px;
+      color: var(--orange);
+      line-height: 0.7;
+      margin-bottom: 16px;
+    }
+    .testimonial-text {
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .author-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      background: var(--surface2);
+    }
+    .author-name {
+      font-family: 'Barlow', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .author-role {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* CTA SECTION */
+    .cta-section {
+      padding: 160px 80px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, var(--orange-glow) 0%, transparent 70%);
+    }
+    .cta-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(60px, 8vw, 120px);
+      letter-spacing: 4px;
+      line-height: 0.95;
+      margin-bottom: 32px;
+      position: relative;
+      z-index: 1;
+    }
+    .cta-title .stroke {
+      -webkit-text-stroke: 1px var(--white);
+      color: transparent;
+    }
+    .cta-desc {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 48px;
+      line-height: 1.7;
+      position: relative;
+      z-index: 1;
+    }
+    .cta-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .upload-zone {
+      border: 1px dashed var(--border);
+      padding: 32px 48px;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      transition: all 0.3s;
+      cursor: none;
+      position: relative;
+      z-index: 1;
+    }
+    .upload-zone:hover {
+      border-color: var(--orange);
+      color: var(--orange);
+      background: var(--orange-glow);
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 64px 80px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 64px;
+    }
+    .footer-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 4px;
+      margin-bottom: 16px;
+    }
+    .footer-brand span { color: var(--orange); }
+    .footer-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 280px;
+      margin-bottom: 32px;
+    }
+    .footer-social {
+      display: flex;
+      gap: 12px;
+    }
+    .social-link {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      text-decoration: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+    .social-link:hover {
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+    .footer-col-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 3px;
+      margin-bottom: 24px;
+    }
+    .footer-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .footer-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .footer-links a:hover { color: var(--orange); }
+    .footer-bottom {
+      grid-column: 1 / -1;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-copy {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .footer-copy span { color: var(--orange); }
+
+    /* CONTACT FORM */
+    .contact-form {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      text-align: left;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .form-group.full { margin-bottom: 16px; }
+    .form-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .form-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      font-size: 14px;
+      padding: 14px 18px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+      appearance: none;
+    }
+    .form-input::placeholder { color: #444; }
+    .form-input:focus { border-color: var(--orange); }
+    .form-textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    select.form-input { cursor: pointer; }
+    .upload-zone {
+      border: 1px dashed var(--border);
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      transition: all 0.3s;
+      width: 100%;
+    }
+    .upload-zone:hover {
+      border-color: var(--orange);
+      color: var(--orange);
+      background: var(--orange-glow);
+    }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-right { display: none; }
+      .services-grid { grid-template-columns: 1fr 1fr; }
+      .process-steps { grid-template-columns: 1fr 1fr; gap: 48px; }
+      .process-steps::before { display: none; }
+      .materials-grid { grid-template-columns: repeat(3, 1fr); }
+      .specs-layout { grid-template-columns: 1fr; }
+      footer { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      nav { padding: 20px 24px; }
+      .nav-links { display: none; }
+      .hero-left { padding: 80px 24px; }
+      .services, .process, .materials, .specs, .testimonials, .cta-section { padding: 80px 24px; }
+      .services-grid, .testimonials-grid { grid-template-columns: 1fr; }
+      .materials-grid { grid-template-columns: repeat(2, 1fr); }
+      footer { grid-template-columns: 1fr; padding: 48px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cursor -->
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- NAVBAR -->
+  <nav>
+    <a href="#" class="nav-logo">STRAT<span>UM</span></a>
+    <ul class="nav-links">
+      <li><a href="#services">Services</a></li>
+      <li><a href="#materials">Materials</a></li>
+      <li><a href="#process">Process</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <button class="nav-cta">Upload File</button>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <p class="hero-eyebrow">// Layer by Layer — Built to Spec</p>
+      <h1 class="hero-title">
+        PRINT<br/>
+        THE<br/>
+        <span class="accent">FU</span><span class="stroke">TURE</span>
+      </h1>
+      <p class="hero-desc">Professional FDM 3D printing for engineers, designers, and visionaries. From prototype to production — precision at every layer.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary">Start a Project</a>
+        <a href="#services" class="btn-outline">View Services</a>
+      </div>
+      <div class="hero-stats">
+        <div>
+          <div class="stat-num">50<span>μm</span></div>
+          <div class="stat-label">Min Layer Height</div>
+        </div>
+        <div>
+          <div class="stat-num">24<span>h</span></div>
+          <div class="stat-label">Rush Turnaround</div>
+        </div>
+        <div>
+          <div class="stat-num">12<span>+</span></div>
+          <div class="stat-label">Materials</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="scan-line"></div>
+      <div class="print-visual">
+        <!-- Geometric 3D Shape SVG -->
+        <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Isometric cube / lattice structure -->
+          <g opacity="0.9">
+            <!-- Main body -->
+            <polygon points="200,60 320,130 320,270 200,340 80,270 80,130" fill="none" stroke="#ff4d00" stroke-width="1.5" opacity="0.6"/>
+            <!-- Inner layers -->
+            <polygon points="200,90 295,145 295,255 200,310 105,255 105,145" fill="none" stroke="#ff4d00" stroke-width="1" opacity="0.4"/>
+            <polygon points="200,120 270,160 270,240 200,280 130,240 130,160" fill="none" stroke="#ff4d00" stroke-width="1" opacity="0.3"/>
+            <polygon points="200,150 245,175 245,225 200,250 155,225 155,175" fill="none" stroke="#ff4d00" stroke-width="1.5" opacity="0.7"/>
+            <!-- Connectors -->
+            <line x1="200" y1="60" x2="200" y2="150" stroke="#ff4d00" stroke-width="1" opacity="0.3"/>
+            <line x1="320" y1="130" x2="245" y2="175" stroke="#ff4d00" stroke-width="1" opacity="0.3"/>
+            <line x1="320" y1="270" x2="245" y2="225" stroke="#ff4d00" stroke-width="1" opacity="0.3"/>
+            <line x1="200" y1="340" x2="200" y2="250" stroke="#ff4d00" stroke-width="1" opacity="0.3"/>
+            <line x1="80" y1="270" x2="155" y2="225" stroke="#ff4d00" stroke-width="1" opacity="0.3"/>
+            <line x1="80" y1="130" x2="155" y2="175" stroke="#ff4d00" stroke-width="1" opacity="0.3"/>
+            <!-- Corner dots -->
+            <circle cx="200" cy="60" r="4" fill="#ff4d00"/>
+            <circle cx="320" cy="130" r="4" fill="#ff4d00"/>
+            <circle cx="320" cy="270" r="4" fill="#ff4d00"/>
+            <circle cx="200" cy="340" r="4" fill="#ff4d00"/>
+            <circle cx="80" cy="270" r="4" fill="#ff4d00"/>
+            <circle cx="80" cy="130" r="4" fill="#ff4d00"/>
+            <circle cx="200" cy="200" r="6" fill="#ff4d00" opacity="0.8"/>
+            <!-- Grid lines -->
+            <line x1="80" y1="200" x2="320" y2="200" stroke="#ff4d00" stroke-width="0.5" opacity="0.2"/>
+            <line x1="200" y1="60" x2="200" y2="340" stroke="#ff4d00" stroke-width="0.5" opacity="0.2"/>
+          </g>
+          <!-- Animated layer indicator -->
+          <rect x="160" y="185" width="80" height="30" fill="rgba(255,77,0,0.05)" stroke="#ff4d00" stroke-width="0.5">
+            <animate attributeName="y" values="60;310;60" dur="4s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0;0.8;0" dur="4s" repeatCount="indefinite"/>
+          </rect>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      <span class="marquee-item">FDM PRINTING <span>///</span></span>
+      <span class="marquee-item">PLA+ <span>///</span></span>
+      <span class="marquee-item">PETG <span>///</span></span>
+      <span class="marquee-item">ABS <span>///</span></span>
+      <span class="marquee-item">TPU FLEX <span>///</span></span>
+      <span class="marquee-item">RAPID PROTOTYPING <span>///</span></span>
+      <span class="marquee-item">BATCH PRODUCTION <span>///</span></span>
+      <span class="marquee-item">FDM PRINTING <span>///</span></span>
+      <span class="marquee-item">PLA+ <span>///</span></span>
+      <span class="marquee-item">PETG <span>///</span></span>
+      <span class="marquee-item">ABS <span>///</span></span>
+      <span class="marquee-item">TPU FLEX <span>///</span></span>
+      <span class="marquee-item">RAPID PROTOTYPING <span>///</span></span>
+      <span class="marquee-item">BATCH PRODUCTION <span>///</span></span>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <section class="services reveal" id="services">
+    <div class="section-header">
+      <div>
+        <p class="section-tag">// 01 — What We Do</p>
+        <h2 class="section-title">PRINT<br/>SERVICES</h2>
+      </div>
+      <p class="section-desc">From single prototypes to small-batch production — every order is handled with precision and care.</p>
+    </div>
+    <div class="services-grid">
+      <div class="service-card reveal">
+        <p class="service-num">01</p>
+        <svg class="service-icon" viewBox="0 0 48 48" fill="none">
+          <rect x="8" y="32" width="32" height="8" stroke="#ff4d00" stroke-width="1.5"/>
+          <rect x="12" y="24" width="24" height="8" stroke="#ff4d00" stroke-width="1.5"/>
+          <rect x="16" y="16" width="16" height="8" stroke="#ff4d00" stroke-width="1.5"/>
+          <rect x="20" y="8" width="8" height="8" stroke="#ff4d00" stroke-width="1.5"/>
+        </svg>
+        <h3 class="service-name">Rapid Prototyping</h3>
+        <p class="service-desc">Turn your CAD files into physical parts fast. Ideal for design iteration, fit checks, and concept models — printed same or next day.</p>
+        <a href="#" class="service-link">Learn More →</a>
+      </div>
+      <div class="service-card reveal">
+        <p class="service-num">02</p>
+        <svg class="service-icon" viewBox="0 0 48 48" fill="none">
+          <rect x="4" y="4" width="18" height="18" stroke="#ff4d00" stroke-width="1.5"/>
+          <rect x="26" y="4" width="18" height="18" stroke="#ff4d00" stroke-width="1.5"/>
+          <rect x="4" y="26" width="18" height="18" stroke="#ff4d00" stroke-width="1.5"/>
+          <rect x="26" y="26" width="18" height="18" stroke="#ff4d00" stroke-width="1.5"/>
+          <circle cx="13" cy="13" r="3" fill="#ff4d00" opacity="0.5"/>
+          <circle cx="35" cy="35" r="3" fill="#ff4d00" opacity="0.5"/>
+        </svg>
+        <h3 class="service-name">Batch Production</h3>
+        <p class="service-desc">Scale from one to hundreds of identical FDM parts. Volume pricing, consistent quality control, and scheduled delivery for every run.</p>
+        <a href="#" class="service-link">Learn More →</a>
+      </div>
+      <div class="service-card reveal">
+        <p class="service-num">03</p>
+        <svg class="service-icon" viewBox="0 0 48 48" fill="none">
+          <path d="M8 40 L24 8 L40 40" stroke="#ff4d00" stroke-width="1.5" fill="none"/>
+          <path d="M12 32 L36 32" stroke="#ff4d00" stroke-width="1.5"/>
+          <path d="M16 24 L32 24" stroke="#ff4d00" stroke-width="1"/>
+        </svg>
+        <h3 class="service-name">Functional Parts</h3>
+        <p class="service-desc">Engineering-grade FDM in PETG, ABS, and ASA for parts that need to perform — heat resistance, mechanical strength, and snap fits.</p>
+        <a href="#" class="service-link">Learn More →</a>
+      </div>
+      <div class="service-card reveal">
+        <p class="service-num">04</p>
+        <svg class="service-icon" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="20" r="10" stroke="#ff4d00" stroke-width="1.5"/>
+          <path d="M14 40 C14 34 18 30 24 30 C30 30 34 34 34 40" stroke="#ff4d00" stroke-width="1.5"/>
+          <line x1="36" y1="12" x2="44" y2="8" stroke="#ff4d00" stroke-width="1.5"/>
+          <line x1="36" y1="20" x2="44" y2="20" stroke="#ff4d00" stroke-width="1.5"/>
+          <line x1="36" y1="28" x2="44" y2="32" stroke="#ff4d00" stroke-width="1.5"/>
+        </svg>
+        <h3 class="service-name">Design Consult</h3>
+        <p class="service-desc">Our engineers review your STL for FDM optimization — wall thickness, overhangs, infill strategy, tolerances, and material selection.</p>
+        <a href="#" class="service-link">Learn More →</a>
+      </div>
+      <div class="service-card reveal">
+        <p class="service-num">05</p>
+        <svg class="service-icon" viewBox="0 0 48 48" fill="none">
+          <rect x="10" y="10" width="28" height="28" rx="2" stroke="#ff4d00" stroke-width="1.5"/>
+          <line x1="10" y1="20" x2="38" y2="20" stroke="#ff4d00" stroke-width="1"/>
+          <line x1="10" y1="30" x2="38" y2="30" stroke="#ff4d00" stroke-width="1"/>
+          <line x1="20" y1="10" x2="20" y2="38" stroke="#ff4d00" stroke-width="1"/>
+          <line x1="30" y1="10" x2="30" y2="38" stroke="#ff4d00" stroke-width="1"/>
+        </svg>
+        <h3 class="service-name">Multi-Material</h3>
+        <p class="service-desc">Dual-extrusion FDM for parts with rigid and flexible zones, soluble supports, or two-color finishes — all in a single print run.</p>
+        <a href="#" class="service-link">Learn More →</a>
+      </div>
+      <div class="service-card reveal">
+        <p class="service-num">06</p>
+        <svg class="service-icon" viewBox="0 0 48 48" fill="none">
+          <path d="M24 4 L44 14 L44 34 L24 44 L4 34 L4 14 Z" stroke="#ff4d00" stroke-width="1.5" fill="none"/>
+          <path d="M24 4 L24 44" stroke="#ff4d00" stroke-width="1" opacity="0.4"/>
+          <path d="M4 14 L44 14" stroke="#ff4d00" stroke-width="1" opacity="0.4"/>
+          <path d="M4 34 L44 34" stroke="#ff4d00" stroke-width="1" opacity="0.4"/>
+          <circle cx="24" cy="24" r="4" fill="#ff4d00" opacity="0.6"/>
+        </svg>
+        <h3 class="service-name">Post Processing</h3>
+        <p class="service-desc">Sanding, priming, painting, and acetone vapor smoothing for ABS — we finish your FDM parts to the spec and surface quality you need.</p>
+        <a href="#" class="service-link">Learn More →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section class="process reveal" id="process">
+    <div class="section-header">
+      <div>
+        <p class="section-tag">// 02 — How It Works</p>
+        <h2 class="section-title">THE<br/>PROCESS</h2>
+      </div>
+      <p class="section-desc">From file upload to finished part — our streamlined process gets your project done fast.</p>
+    </div>
+    <div class="process-steps">
+      <div class="step reveal">
+        <div class="step-circle">01</div>
+        <h3 class="step-title">Upload File</h3>
+        <p class="step-desc">Submit your STL, OBJ, or STEP file through our secure portal. We accept files up to 2GB.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-circle">02</div>
+        <h3 class="step-title">Get Quote</h3>
+        <p class="step-desc">Instant automated quote or expert review within 2 hours. Select material, finish, and quantity.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-circle">03</div>
+        <h3 class="step-title">We Print</h3>
+        <p class="step-desc">Our team begins production. Real-time order tracking so you're never left wondering.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-circle">04</div>
+        <h3 class="step-title">Delivered</h3>
+        <p class="step-desc">Quality-checked and packaged, shipped to your door or available for local pickup same day.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MATERIALS -->
+  <section class="materials reveal" id="materials">
+    <div class="section-header">
+      <div>
+        <p class="section-tag">// 03 — What We Print With</p>
+        <h2 class="section-title">MATERIALS</h2>
+      </div>
+      <p class="section-desc">Twelve materials across FDM, resin, and powder technologies.</p>
+    </div>
+    <div class="materials-grid">
+      <div class="material-card reveal">
+        <div class="material-swatch" style="background: linear-gradient(135deg,#e8e8e8,#c0c0c0);"></div>
+        <div class="material-name">PLA+</div>
+        <div class="material-prop">Standard / Eco</div>
+      </div>
+      <div class="material-card reveal">
+        <div class="material-swatch" style="background: linear-gradient(135deg,#4a9eff,#0066cc);"></div>
+        <div class="material-name">PETG</div>
+        <div class="material-prop">Tough / Chemical Resist</div>
+      </div>
+      <div class="material-card reveal">
+        <div class="material-swatch" style="background: linear-gradient(135deg,#333,#111);"></div>
+        <div class="material-name">ABS</div>
+        <div class="material-prop">Heat Resistant</div>
+      </div>
+      <div class="material-card reveal">
+        <div class="material-swatch" style="background: linear-gradient(135deg,#ff9a3c,#ff4d00);"></div>
+        <div class="material-name">TPU</div>
+        <div class="material-prop">Flexible / Rubber</div>
+      </div>
+      <div class="material-card reveal">
+        <div class="material-swatch" style="background: linear-gradient(135deg,#c8e6c9,#66bb6a);"></div>
+        <div class="material-name">ASA</div>
+        <div class="material-prop">UV / Outdoor Stable</div>
+      </div>
+      <div class="material-card reveal">
+        <div class="material-swatch" style="background: linear-gradient(135deg,#ffe0b2,#ffa726);"></div>
+        <div class="material-name">CF-PLA</div>
+        <div class="material-prop">Carbon Fibre Fill</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SPECS + PRICING -->
+  <section class="specs reveal" id="pricing">
+    <div class="section-header">
+      <div>
+        <p class="section-tag">// 04 — Technical Specs & Pricing</p>
+        <h2 class="section-title">SPECS &<br/>PRICING</h2>
+      </div>
+      <p class="section-desc">Industry-leading precision at transparent, competitive rates.</p>
+    </div>
+    <div class="specs-layout">
+      <div class="spec-table reveal">
+        <div class="spec-row">
+          <span class="spec-key">Build Volume</span>
+          <span class="spec-val">400 × 400 × 500 mm</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Layer Height</span>
+          <span class="spec-val highlight">100 – 300 μm</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Nozzle Diameter</span>
+          <span class="spec-val">0.4 – 1.0 mm</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Dimensional Tolerance</span>
+          <span class="spec-val highlight">± 0.2 mm</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Infill Density</span>
+          <span class="spec-val">5 – 100%</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Standard Turnaround</span>
+          <span class="spec-val highlight">3 – 5 Days</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Rush Turnaround</span>
+          <span class="spec-val">24 Hours</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">File Formats</span>
+          <span class="spec-val">STL / OBJ / STEP</span>
+        </div>
+      </div>
+      <div class="pricing-card reveal">
+        <span class="pricing-badge">Most Popular</span>
+        <div class="pricing-name">Standard Tier</div>
+        <div class="pricing-price">$0.15</div>
+        <div class="pricing-unit">per cubic centimeter + material</div>
+        <ul class="pricing-features">
+          <li>All FDM materials included</li>
+          <li>3–5 day standard turnaround</li>
+          <li>Free design review</li>
+          <li>Real-time order tracking</li>
+          <li>Packaged & insured shipping</li>
+        </ul>
+        <a href="#" class="btn-primary" style="display:block;text-align:center;">Get Instant Quote</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials reveal" id="testimonials">
+    <div class="section-header">
+      <div>
+        <p class="section-tag">// 05 — Client Feedback</p>
+        <h2 class="section-title">WHAT<br/>THEY SAY</h2>
+      </div>
+      <p class="section-desc">Trusted by engineers, studios, and startups worldwide.</p>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial reveal">
+        <div class="testimonial-quote">"</div>
+        <p class="testimonial-text">Stratum turned our CAD files into production-ready parts faster than any service we've tried. The tolerances were dead-on and the surface finish was immaculate.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">MK</div>
+          <div>
+            <div class="author-name">Maya Kim</div>
+            <div class="author-role">Mechanical Engineer, Arcform</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial reveal">
+        <div class="testimonial-quote">"</div>
+        <p class="testimonial-text">We use them for every product launch prototype. The layer quality and dimensional accuracy on their FDM parts rivals what we've seen from much more expensive services. Genuinely impressive.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">DP</div>
+          <div>
+            <div class="author-name">Daniel Park</div>
+            <div class="author-role">Industrial Designer, Studio Thread</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial reveal">
+        <div class="testimonial-quote">"</div>
+        <p class="testimonial-text">Rush order on a Friday, delivered Monday morning. I've never experienced turnaround that fast without sacrificing quality. This is the future of manufacturing.</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">SL</div>
+          <div>
+            <div class="author-name">Sofia Lenz</div>
+            <div class="author-role">CTO, Kinetica Labs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section" id="contact">
+    <h2 class="cta-title">
+      READY<br/>
+      TO <span class="accent" style="color:var(--orange)">BUILD</span><br/>
+      <span class="stroke">SOMETHING?</span>
+    </h2>
+    <p class="cta-desc">Fill in your details and describe your print — we'll get back to you with a quote within hours.</p>
+    <form class="contact-form" action="https://formspree.io/f/mgolkzbw" method="POST" enctype="multipart/form-data">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-input" type="text" name="name" placeholder="Your name" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" name="email" placeholder="your@email.com" required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Material</label>
+          <select class="form-input" name="material">
+            <option value="">Select material</option>
+            <option>PLA+</option>
+            <option>PETG</option>
+            <option>ABS</option>
+            <option>TPU</option>
+            <option>ASA</option>
+            <option>CF-PLA</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantity</label>
+          <input class="form-input" type="number" name="quantity" placeholder="e.g. 10" min="1" />
+        </div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Project Description</label>
+        <textarea class="form-input form-textarea" name="message" placeholder="Describe your part, dimensions, tolerances, finish requirements..." required></textarea>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Attach File (STL / OBJ / STEP)</label>
+        <label class="upload-zone" id="uploadLabel" style="cursor:pointer;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span id="uploadText">Drop file or click to browse</span>
+          <input type="file" name="file" accept=".stl,.obj,.step,.stp" style="display:none" id="fileInput" />
+        </label>
+      </div>
+      <button type="submit" class="btn-primary" style="width:100%;text-align:center;padding:20px;font-size:13px;">Send Quote Request →</button>
+    </form>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>
+      <div class="footer-brand">STRAT<span>UM</span></div>
+      <p class="footer-desc">Professional FDM 3D printing services. Precision manufacturing in PLA, PETG, ABS, TPU, ASA, and carbon-filled materials.</p>
+      <div class="footer-social">
+        <a href="#" class="social-link">TW</a>
+        <a href="#" class="social-link">IG</a>
+        <a href="#" class="social-link">LI</a>
+        <a href="#" class="social-link">YT</a>
+      </div>
+    </div>
+    <div>
+      <p class="footer-col-title">Services</p>
+      <ul class="footer-links">
+        <li><a href="#">Rapid Prototyping</a></li>
+        <li><a href="#">Batch Production</a></li>
+        <li><a href="#">Functional Parts</a></li>
+        <li><a href="#">Multi-Material</a></li>
+        <li><a href="#">Post Processing</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-col-title">Materials</p>
+      <ul class="footer-links">
+        <li><a href="#">PLA+</a></li>
+        <li><a href="#">PETG</a></li>
+        <li><a href="#">ABS</a></li>
+        <li><a href="#">TPU</a></li>
+        <li><a href="#">ASA / CF-PLA</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-col-title">Company</p>
+      <ul class="footer-links">
+        <li><a href="#">About</a></li>
+        <li><a href="#">Capabilities</a></li>
+        <li><a href="#">Case Studies</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 <span>STRATUM</span> — All Rights Reserved</span>
+      <span class="footer-copy">Privacy Policy · Terms of Use</span>
+    </div>
+  </footer>
+
+  <script>
+    // Custom cursor
+    const cursor = document.getElementById('cursor');
+    const ring = document.getElementById('cursorRing');
+    let cx = 0, cy = 0, rx = 0, ry = 0;
+    document.addEventListener('mousemove', e => {
+      cx = e.clientX; cy = e.clientY;
+      cursor.style.left = cx + 'px';
+      cursor.style.top = cy + 'px';
+    });
+    function animateRing() {
+      rx += (cx - rx) * 0.12;
+      ry += (cy - ry) * 0.12;
+      ring.style.left = rx + 'px';
+      ring.style.top = ry + 'px';
+      requestAnimationFrame(animateRing);
+    }
+    animateRing();
+
+    // Hover effects on interactive elements
+    document.querySelectorAll('a, button, .service-card, .material-card, .upload-zone').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        cursor.style.width = '20px';
+        cursor.style.height = '20px';
+        ring.style.width = '56px';
+        ring.style.height = '56px';
+        ring.style.opacity = '1';
+      });
+      el.addEventListener('mouseleave', () => {
+        cursor.style.width = '12px';
+        cursor.style.height = '12px';
+        ring.style.width = '36px';
+        ring.style.height = '36px';
+        ring.style.opacity = '0.5';
+      });
+    });
+
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), i * 80);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(el => observer.observe(el));
+
+    // File input label update
+    const fileInput = document.getElementById('fileInput');
+    const uploadText = document.getElementById('uploadText');
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files[0]) uploadText.textContent = fileInput.files[0].name;
+      });
+    }
+
+    // Smooth active nav link highlighting
+    const sections = document.querySelectorAll('section[id]');
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(sec => {
+        if (window.scrollY >= sec.offsetTop - 120) current = sec.id;
+      });
+      document.querySelectorAll('.nav-links a').forEach(a => {
+        a.style.color = a.getAttribute('href') === '#' + current ? 'var(--orange)' : '';
+      });
+    });
+  </script>
+</body>
+</html>
